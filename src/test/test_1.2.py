@@ -2,16 +2,18 @@ import librosa
 import numpy as np
 from keras import models
 import os
-import keyboard
+
+
 from tqdm import tqdm
 import shutil
 import soundfile as sf
 import sys
+import time
 
 input_audio = ("audio/input_audio/")
 output_origin_audio = ("audio/output_origin_audio/")
 output_split_audio = ("audio/output_split_audio/")
-model_dir = ("model/test_model_2.h5")
+model_dir = ("model/test_model_3.h5")
 
 def get_model():
     return models.load_model(model_dir)
@@ -22,8 +24,9 @@ def load(file_name):
     y, sr = librosa.load(wav, sr=file_sr)
     
     if(sr != 16000):
-        print("reampling")
+        start = time.time()
         y = librosa.resample(y, sr, 16000)
+        print("time :", time.time() - start)
     
     return y
 
@@ -117,21 +120,17 @@ def main():
     
     model = get_model()
     print("시작. 파일 load 가능")
+           
     while True:
         try:
-            if keyboard.is_pressed('q'):
-                print('종료')
-                break
-            
             input_audio_list = os.listdir(input_audio)
             
             if(len(input_audio_list)):
-#                 print(input_audio_list[0], "파일확인")
                 predict(input_audio_list[0], model)
-            
-        except:
+                
+        except KeyboardInterrupt:
+            print("종료")
             break
-
         
 if __name__ == "__main__":
     main()

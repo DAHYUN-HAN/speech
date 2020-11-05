@@ -7,11 +7,12 @@ from tqdm import tqdm
 import shutil
 import soundfile as sf
 import sys
+import time
 
 input_audio = ("audio/input_audio/")
 output_origin_audio = ("audio/output_origin_audio/")
 output_split_audio = ("audio/output_split_audio/")
-model_dir = ("model/test_model_2.h5")
+model_dir = ("model/test_model_3.h5")
 
 def get_model():
     return models.load_model(model_dir)
@@ -31,14 +32,10 @@ def make_patches(y):
     print("mfcc 추출")
     
     test = []
-    for i in tqdm(range(int((len(y)/3200))-9)):
-        p = i * 3200
+    for i in tqdm(range(int((len(y)/1600))-19)):
+        p = i * 1600
         q = p + 32000
         split = y[p:q]
-        
-#         max_mine = np.max(split)
-#         ratio = 0.46202388 / max_mine
-#         split = split * ratio
         
         mfcc = librosa.feature.mfcc(split, sr=16000)
         test.append(mfcc)
@@ -59,7 +56,7 @@ def predict(test_audio, model):
     test_X = make_patches(y)
     
     Y_pred = model.predict(test_X)
-    y_pred = np.argmax(Y_pred>=0.8,axis=1)
+    y_pred = np.argmax(Y_pred,axis=1)
     
     detect = get_result(y, y_pred, test_audio)
     
@@ -68,27 +65,26 @@ def predict(test_audio, model):
 def get_result(y, y_pred, test_audio):
     fire_count = 0
     non_count = 0
+    pass_count = 21
     fire_predict = []
-    temp_predict = []
     
     for i in range(len(y_pred)):
         
-        if(y_pred[i] == 0):
-            non_count = non_count + 1
-        
-            if(non_count >= 2):
-                fire_count = 0
+        if(y_pred[i] == 1):
+            fire_count = fire_count + 1
+            
+            if(fire_count >= 5):
+                non_count = 0
+                if(pass_count > 20):
+                    pass_count = 0
+                    fire_predict.append(i)
         
         else :
-            fire_count = fire_count + 1
-            non_count = 0
-            if(fire_count >= 3):
-                temp_predict.append(i)
-    n = 0
-    for i in range(len(temp_predict)):
-        if(temp_predict[i] > n):
-            fire_predict.append(temp_predict[i])
-            n = temp_predict[i] + 10
+            non_count = non_count + 1
+            if(non_count >= 5):
+                fire_count = 0
+                
+        pass_count = pass_count + 1
             
     print("결과\n",test_audio + "파일")
     
@@ -153,8 +149,9 @@ def main():
             
             if(len(input_audio_list)):
 #                 print("파일확인")
+                start = time.time()
                 predict(input_audio_list[0], model)
-            
+                print("time :", time.time() - start)
             
         except:
             break
